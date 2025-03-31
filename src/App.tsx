@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { PDFReport } from './components/PDFReport';
 
-// ✅ Define types
+// ✅ Types
 type WallKey = 'east' | 'south' | 'west' | 'north';
 
 interface WallData {
@@ -161,6 +161,8 @@ function App() {
           <h2 className="text-xl font-bold mb-3">計算結果</h2>
           {(Object.keys(result.wallResults) as WallKey[]).map((key) => {
             const res = result.wallResults[key];
+            if (res.tiles === 0 || res.wallArea === 0) return null; // ✅ Hide empty walls
+
             return (
               <div key={key} className="mb-2">
                 <p className="font-semibold">{wallLabels[key]}</p>
@@ -170,6 +172,7 @@ function App() {
               </div>
             );
           })}
+
           <hr className="my-3" />
           <p><strong>合計浮き面積:</strong> {result.totalCovered.toFixed(2)} m²</p>
           <p><strong>合計壁面積:</strong> {result.totalWall.toFixed(2)} m²</p>
@@ -177,7 +180,7 @@ function App() {
 
           <div className="text-center mt-6">
             <PDFDownloadLink
-              document={<PDFReport result={result} tileSize={tileSize} />}
+              document={<PDFReport result={result!} tileSize={tileSize} />}
               fileName="tile-floating-report.pdf"
               className="inline-block px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
             >
