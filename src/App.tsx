@@ -2,17 +2,39 @@ import { useState } from 'react';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { PDFReport } from './components/PDFReport';
 
+// ✅ Define types
+type WallKey = 'east' | 'south' | 'west' | 'north';
+
+interface WallData {
+  floating: string;
+  area: string;
+}
+
+interface WallResult {
+  tiles: number;
+  covered: number;
+  wallArea: number;
+  percent: number;
+}
+
 function App() {
   const [tileSize, setTileSize] = useState({ width: '', height: '' });
-  const [walls, setWalls] = useState({
+
+  const [walls, setWalls] = useState<Record<WallKey, WallData>>({
     east: { floating: '', area: '' },
     south: { floating: '', area: '' },
     west: { floating: '', area: '' },
     north: { floating: '', area: '' },
   });
-  const [result, setResult] = useState<any>(null);
 
-  const handleChange = (wall: string, field: 'floating' | 'area', value: string) => {
+  const [result, setResult] = useState<{
+    totalCovered: number;
+    totalWall: number;
+    totalPercent: number;
+    wallResults: Record<WallKey, WallResult>;
+  } | null>(null);
+
+  const handleChange = (wall: WallKey, field: keyof WallData, value: string) => {
     setWalls(prev => ({
       ...prev,
       [wall]: {
@@ -29,13 +51,18 @@ function App() {
 
     let totalCovered = 0;
     let totalWall = 0;
-    const wallResults: any = {};
+    const wallResults: Record<WallKey, WallResult> = {
+      east: { tiles: 0, covered: 0, wallArea: 0, percent: 0 },
+      south: { tiles: 0, covered: 0, wallArea: 0, percent: 0 },
+      west: { tiles: 0, covered: 0, wallArea: 0, percent: 0 },
+      north: { tiles: 0, covered: 0, wallArea: 0, percent: 0 },
+    };
 
-    Object.entries(walls).forEach(([key, data]) => {
-      const tiles = parseInt(data.floating);
-      const wallArea = parseFloat(data.area);
+    (Object.keys(walls) as WallKey[]).forEach((key) => {
+      const tiles = parseInt(walls[key].floating) || 0;
+      const wallArea = parseFloat(walls[key].area) || 0;
       const covered = tiles * tileArea;
-      const percent = (covered / wallArea) * 100;
+      const percent = wallArea > 0 ? (covered / wallArea) * 100 : 0;
 
       wallResults[key] = { tiles, covered, wallArea, percent };
       totalCovered += covered;
@@ -45,7 +72,7 @@ function App() {
     setResult({
       totalCovered,
       totalWall,
-      totalPercent: (totalCovered / totalWall) * 100,
+      totalPercent: totalWall > 0 ? (totalCovered / totalWall) * 100 : 0,
       wallResults
     });
   };
@@ -61,7 +88,7 @@ function App() {
     setResult(null);
   };
 
-  const wallLabels = {
+  const wallLabels: Record<WallKey, string> = {
     east: '東面',
     south: '南面',
     west: '西面',
@@ -93,9 +120,9 @@ function App() {
       </div>
 
       <div className="bg-white rounded-lg shadow p-4 mb-6 grid grid-cols-2 gap-6">
-        {Object.entries(wallLabels).map(([key, label]) => (
+        {(Object.keys(wallLabels) as WallKey[]).map((key) => (
           <div key={key}>
-            <h3 className="text-lg font-semibold mb-2">{label}</h3>
+            <h3 className="text-lg font-semibold mb-2">{wallLabels[key]}</h3>
             <input
               type="number"
               placeholder="浮きタイル枚数"
@@ -132,14 +159,17 @@ function App() {
       {result && (
         <div className="bg-white rounded-lg shadow p-4">
           <h2 className="text-xl font-bold mb-3">計算結果</h2>
-          {Object.entries(result.wallResults).map(([key, res]: any) => (
-            <div key={key} className="mb-2">
-              <p className="font-semibold">{wallLabels[key]}</p>
-              <p>浮き面積: {res.covered.toFixed(2)} m²</p>
-              <p>壁面積: {res.wallArea.toFixed(2)} m²</p>
-              <p>浮き率: {res.percent.toFixed(2)}%</p>
-            </div>
-          ))}
+          {(Object.keys(result.wallResults) as WallKey[]).map((key) => {
+            const res = result.wallResults[key];
+            return (
+              <div key={key} className="mb-2">
+                <p className="font-semibold">{wallLabels[key]}</p>
+                <p>浮き面積: {res.covered.toFixed(2)} m²</p>
+                <p>壁面積: {res.wallArea.toFixed(2)} m²</p>
+                <p>浮き率: {res.percent.toFixed(2)}%</p>
+              </div>
+            );
+          })}
           <hr className="my-3" />
           <p><strong>合計浮き面積:</strong> {result.totalCovered.toFixed(2)} m²</p>
           <p><strong>合計壁面積:</strong> {result.totalWall.toFixed(2)} m²</p>
